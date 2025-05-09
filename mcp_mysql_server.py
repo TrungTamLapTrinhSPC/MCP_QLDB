@@ -216,15 +216,33 @@ def query_mysql(sql_query: str) -> List[Dict[str, Any]]:
 def get_target_tables(question: str) -> List[str]:
     question = question.lower()
     tables = []
+
+    keywords_to_tables = {
+        "dự án": "duan",
+        "gói thầu": "goithau",
+        "hạng mục": "hangmuc",
+        "khối lượng thi công": "khoiluong_thicong",
+        "nhà thầu": "nhathau",
+        "tiến độ": "tiendothuchien",
+        "kế hoạch": "quanlykehoach",
+        "tài khoản": "taikhoan",
+        "phân quyền": "phanquyen"
+    }
+
+    for keyword, table in keywords_to_tables.items():
+        if keyword in question:
+            tables.append(table)
+
+    return tables
     
-    if "dự án" in question or "du an" in question:
-        tables.append("duan")
-    if "nhà thầu" in question or "nha thau" in question:
-        tables.append("nhathau")
-    if "khối lượng" in question or "khoi luong" in question:
-        tables.append("khoiluong")
+    # if "dự án" in question or "du an" in question:
+    #     tables.append("duan")
+    # if "nhà thầu" in question or "nha thau" in question:
+    #     tables.append("nhathau")
+    # if "khối lượng" in question or "khoi luong" in question:
+    #     tables.append("khoiluong")
     
-    return tables if tables else ["duan"]
+    # return tables if tables else ["duan"]
 
 
 # Tạo truy vấn SQL với Ollama
@@ -242,6 +260,12 @@ You are an expert in generating MySQL queries. Based on the following database s
 User question: {question}
 
 Example:
+- Question: "Dự án Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025 có bao nhiêu gói thầu"
+  Query: SELECT d.TenDuAn, COUNT(g.GoiThau_ID) AS SoLuongGoiThau
+    FROM duan d
+    JOIN goithau g ON d.DuAnID = g.DuAn_ID
+    WHERE d.TenDuAn LIKE '%Vũng Áng - Bùng%'
+    GROUP BY d.TenDuAn
 - Question: "Tìm dự án ở Hà Nội"
   Query: SELECT DuAnID, TenDuAn, TinhThanh, LoaiDuAn FROM duan WHERE TinhThanh = 'Hà Nội'
 - Question: "Tìm nhà thầu ở Hà Nội"
@@ -294,6 +318,9 @@ def generate_answer(question: str, results: List[Dict[str, Any]], target_tables:
     Query results: {}
 
     Example:
+    - Question: "Dự án Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025 có bao nhiêu gói thầu"
+    Results: [{"TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025", "SoLuongGoiThau": 5}]
+    Response: Dự án "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025" có 5 gói thầu
     - Question: "Tìm dự án ở Hà Nội"
     Results: [{{"DuAnID": 1, "TenDuAn": "Dự án Quốc lộ 1A", "TinhThanh": "Hà Nội", "LoaiDuAn": "TONG"}}]
     Response: Tìm thấy 1 dự án tại Hà Nội

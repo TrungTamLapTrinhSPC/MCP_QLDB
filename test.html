@@ -4,15 +4,57 @@
     <title>MCP WebSocket Client</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        #question { width: 300px; padding: 5px; }
-        #results { margin-top: 20px; border: 1px solid #ccc; padding: 10px; }
+        #chat-container {
+            max-width: 600px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            line-height: 1.4;
+        }
+        .user {
+            background-color: #d1e7dd;
+            align-self: flex-end;
+            text-align: right;
+            margin-left: auto;
+        }
+        .bot {
+            background-color: #e2e3e5;
+            align-self: flex-start;
+            text-align: left;
+            margin-right: auto;
+        }
+        #input-container {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        #question {
+            flex: 1;
+            padding: 8px;
+            font-size: 16px;
+        }
+        #results {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body>
-    <h1>MCP WebSocket Client</h1>
-    <input type="text" id="question" placeholder="Nhập câu hỏi (ví dụ: Tìm dự án ở Hà Nội)">
-    <button onclick="sendQuestion()">Gửi</button>
-    <div id="results"></div>
+    <h1>MCP WebSocket Chat</h1>
+    <div id="chat-container">
+        <div id="results"></div>
+        <div id="input-container">
+            <input type="text" id="question" placeholder="Nhập câu hỏi..." onkeydown="if(event.key === 'Enter') sendQuestion()">
+            <button onclick="sendQuestion()">Gửi</button>
+        </div>
+    </div>
 
     <script>
         const socket = new WebSocket('ws://localhost:8765');
@@ -29,37 +71,65 @@
 
         socket.onmessage = (event) => {
             const response = JSON.parse(event.data);
-            document.getElementById('results').innerHTML = "";
+            const resultsDiv = document.getElementById('results');
+
             if (response.result) {
-                const resultDiv = document.getElementById('results');
                 const result = response.result;
-                resultDiv.innerHTML += `
-                    <p><strong>SQL:</strong> ${result.sql_query}</p>
-                    <p><strong>Trả lời:</strong> ${result.answer}</p>
-                    <p><strong>Dữ liệu:</strong> ${JSON.stringify(result.data, null, 2)}</p>
-                    <hr>
-                `;
+                const sqlMessage = document.createElement('div');
+                sqlMessage.className = 'message bot';
+                sqlMessage.innerHTML = `<strong>SQL:</strong> ${result.sql_query}`;
+                resultsDiv.appendChild(sqlMessage);
+
+                const answerMessage = document.createElement('div');
+                answerMessage.className = 'message bot';
+                answerMessage.innerHTML = `<strong>Trả lời:</strong> ${result.answer}`;
+                resultsDiv.appendChild(answerMessage);
+
+                const dataMessage = document.createElement('div');
+                dataMessage.className = 'message bot';
+                dataMessage.innerHTML = `<strong>Dữ liệu:</strong><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                resultsDiv.appendChild(dataMessage);
             } else if (response.error) {
-                console.error('Error:', response.error);
-                document.getElementById('results').innerHTML += `<p style="color: red;">Lỗi: ${response.error.message}</p><hr>`;
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'message bot';
+                errorMessage.style.color = 'red';
+                errorMessage.textContent = `Lỗi: ${response.error.message}`;
+                resultsDiv.appendChild(errorMessage);
             }
+
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
         };
 
         socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            document.getElementById('results').innerHTML += `<p style="color: red;">Lỗi kết nối WebSocket</p><hr>`;
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'message bot';
+            errorMsg.style.color = 'red';
+            errorMsg.textContent = 'Lỗi kết nối WebSocket';
+            document.getElementById('results').appendChild(errorMsg);
         };
 
         socket.onclose = () => {
-            console.log('WebSocket closed');
-            document.getElementById('results').innerHTML += `<p>Đã ngắt kết nối</p>`;
+            const closeMsg = document.createElement('div');
+            closeMsg.className = 'message bot';
+            closeMsg.textContent = 'Đã ngắt kết nối';
+            document.getElementById('results').appendChild(closeMsg);
         };
 
         function sendQuestion() {
-            const question = document.getElementById('question').value;
+            const questionInput = document.getElementById('question');
+            const question = questionInput.value.trim();
+            const resultsDiv = document.getElementById('results');
+
             if (question) {
+                // Hiển thị tin nhắn người dùng
+                const userMessage = document.createElement('div');
+                userMessage.className = 'message user';
+                userMessage.textContent = question;
+                resultsDiv.appendChild(userMessage);
+
                 sendQuery(question, queryId++);
-                document.getElementById('question').value = '';
+                questionInput.value = '';
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
             } else {
                 alert('Vui lòng nhập câu hỏi');
             }
